@@ -2,42 +2,47 @@ import React, { useEffect } from 'react'
 
 import axios from 'axios'
 
-import Card from './components/Card'
+import { stockSlice } from './features/stock/stockSlice'
+import { useAppDispatch } from './app/hooks'
 
-import './App.css'
+import CardsList from './components/CardsList'
+
 import 'materialize-css/dist/css/materialize.min.css'
 
 function App() {
-  // https://api.pexels.com/v1/curated?per_page=1
+  const API = 'https://api.pexels.com/v1/curated'
   const TOKEN = '563492ad6f91700001000001ecf0d3af92a541458c09c1d48706968e'
 
+  const dispatch = useAppDispatch()
+
   useEffect(() => {
-    axios.get('https://api.pexels.com/v1/curated', { headers: { Authorization: TOKEN } }).then(response => {
-      const { data } = response
+    const CancelToken = axios.CancelToken
+    const source = CancelToken.source()
 
-      console.log(data)
-    })
-  }, [])
+    const fetchPics = async () => {
+      try {
+        dispatch(stockSlice.actions.picsFetching())
 
-  const images = [
-    {
-      id: 1,
-      src: 'https://materializecss.com/images/sample-1.jpg'
-    },
-    {
-      id: 2,
-      src: 'https://materializecss.com/images/sample-1.jpg'
-    },
-    {
-      id: 3,
-      src: 'https://materializecss.com/images/sample-1.jpg'
+        const { data } = await axios.get(API, { headers: { Authorization: TOKEN }, cancelToken: source.token })
+
+        dispatch(stockSlice.actions.picsFetchingSuccess(data.photos))
+      } catch (error) {
+        dispatch(stockSlice.actions.picsFetchingError('Error'))
+      }
     }
-  ]
+
+    fetchPics()
+
+    return () => {
+      source.cancel('Operation canceled.')
+      dispatch(stockSlice.actions.picsFetchingError('Operation canceled.'))
+    }
+  }, [dispatch])
 
   return (
-    <div className='App'>
+    <div className='App' style={{padding: '30px 0'}}>
       <div className='container'>
-        <div className='row'>{images.length && images.map(item => <Card src={item.src} key={item.id} />)}</div>
+        <CardsList />
       </div>
     </div>
   )
